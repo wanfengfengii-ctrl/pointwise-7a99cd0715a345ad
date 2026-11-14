@@ -1,0 +1,145 @@
+{
+  "name": "lagstats",
+  "version": "1.0.0",
+  "kind": "python-library",
+  "language": "python",
+  "standard_library_only": true,
+  "dependencies": [],
+  "interpreter": {
+    "requires": ">=3.8",
+    "tested_on": "3.11.2",
+    "platform": "any"
+  },
+  "entry_point": {
+    "module": "lagstats",
+    "callable": "compare",
+    "signature": "compare(left, right)",
+    "inputs": {
+      "left": "sized sequence of length 1..20000; elements None or int with |value| <= 1000",
+      "right": "same as left; lengths may differ",
+      "mutation": "none; inputs are only read"
+    },
+    "output": {
+      "type": "list of [k, p, c, vx, vy]",
+      "lag_order": "increasing k from -(len(left)-1) to len(right)-1",
+      "field_types": "all exact Python int (never float)",
+      "p_zero_rule": "c = vx = vy = 0",
+      "formulas": {
+        "c": "p*sum(x*y) - sum(x)*sum(y)",
+        "vx": "p*sum(x*x) - sum(x)**2",
+        "vy": "p*sum(y*y) - sum(y)**2"
+      }
+    }
+  },
+  "complexity": {
+    "arithmetic_steps": "O((n+m) log(n+m)) modular operations (single NTT batch under one prime)",
+    "auxiliary_space": "O(n+m) words",
+    "forbidden_patterns_absent": [
+      "per-lag scan over overlapping samples",
+      "floating point approximation of results"
+    ]
+  },
+  "method": {
+    "algorithm": "exact lagged cross-correlation via Number Theoretic Transform",
+    "modulus": 45000818689,
+    "modulus_factorization": "343329 * 2^17 + 1 = 2^17 * 3 * 7 * 16349 + 1",
+    "primitive_root": 11,
+    "max_transform_length": 65536,
+    "coefficient_bound": 20000000000,
+    "half_modulus": 22500409344,
+    "missing_data": "pairwise deletion through presence masks; None is neither zero nor imputed",
+    "exactness": "integer residues centred into (-p/2, p/2]; no float anywhere"
+  },
+  "commands": {
+    "verify": "python3 verify.py",
+    "verify_quick": "python3 verify.py --quick",
+    "demo": "python3 demo.py",
+    "bench": "python3 bench.py",
+    "bench_json": "python3 bench.py --json"
+  },
+  "expected_exit_status": {
+    "verify": 0,
+    "demo": 0,
+    "bench": 0
+  },
+  "verification": {
+    "reference": "direct pairwise summation for every lag (O(n*m), test-only)",
+    "randomised_cases": 120,
+    "symmetry_cases": 40,
+    "scale_spot_check": "9 sampled lags at 20000x20000",
+    "verified_invariants": [
+      "row-for-row equality with direct pairing",
+      "lag order and coverage",
+      "p == 0 implies c = vx = vy = 0",
+      "vx >= 0 and vy >= 0",
+      "p == 1 implies c = vx = vy = 0",
+      "c*c <= vx*vy for p >= 2 (Cauchy-Schwarz)",
+      "compare(a,b)[k] mirrors [p, c, vy, vx] at -k in compare(b,a)",
+      "no input mutation",
+      "invalid inputs rejected"
+    ],
+    "reference_complexity": "O(n*m), test-only"
+  },
+  "measured": {
+    "date": "2026-11-14",
+    "harness": "one fresh process per size; 20 percent missing; peak RSS via resource.getrusage",
+    "runs": [
+      {
+        "n": 1000,
+        "m": 1000,
+        "lags": 1999,
+        "seconds": 0.042,
+        "peak_rss_mib": 12.2
+      },
+      {
+        "n": 5000,
+        "m": 5000,
+        "lags": 9999,
+        "seconds": 0.444,
+        "peak_rss_mib": 21.1
+      },
+      {
+        "n": 10000,
+        "m": 10000,
+        "lags": 19999,
+        "seconds": 0.958,
+        "peak_rss_mib": 31.3
+      },
+      {
+        "n": 20000,
+        "m": 20000,
+        "lags": 39999,
+        "seconds": 2.077,
+        "peak_rss_mib": 51.6
+      },
+      {
+        "n": 20000,
+        "m": 1000,
+        "lags": 20999,
+        "seconds": 0.872,
+        "peak_rss_mib": 31.3
+      },
+      {
+        "n": 1000,
+        "m": 20000,
+        "lags": 20999,
+        "seconds": 0.823,
+        "peak_rss_mib": 31.3
+      }
+    ],
+    "runs_max": {
+      "n": 20000,
+      "m": 20000,
+      "lags": 39999,
+      "seconds": 2.077,
+      "peak_rss_mib": 51.6
+    }
+  },
+  "files": {
+    "core": "lagstats.py",
+    "verify": "verify.py",
+    "demo": "demo.py",
+    "bench": "bench.py",
+    "readme": "README.md"
+  }
+}
